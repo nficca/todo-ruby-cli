@@ -64,7 +64,7 @@ class TestTodo < Test::Unit::TestCase
 
     stdout, stderr = @todo.handle(["list"])
 
-    expected_output = <<~EOS
+    expected_output = <<~EOS.chomp
     Priority  ID    Todo
            1  1234  Foo
            3  4567  Bar
@@ -88,7 +88,7 @@ class TestTodo < Test::Unit::TestCase
 
     stdout, stderr = @todo.handle(["list"])
 
-    expected_output = <<~EOS
+    expected_output = <<~EOS.chomp
     Priority  ID    Todo
            1  1234  Foo
            2  4567  Bar
@@ -113,7 +113,7 @@ class TestTodo < Test::Unit::TestCase
 
     stdout, stderr = @todo.handle(["list"])
 
-    expected_output = <<~EOS
+    expected_output = <<~EOS.chomp
     Priority  ID    Todo
            5  92f2  1251
            7  as43  Bar

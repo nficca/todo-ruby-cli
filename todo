@@ -3,7 +3,7 @@ require "json"
 
 class Todo
   TODO_DATA_PATH = ENV["TODO_DATA_PATH"] || "#{ENV["HOME"]}/.todo/data"
-  
+
   HELP_TEXT = <<~EOS
   todo
   ----
@@ -12,27 +12,137 @@ class Todo
   Usage
   ----- 
   General: todo <subcommand> <args...>
-  
+
   List all current todos, their priorities, and the
   available priorities for new todos.
   $ todo list
-  
+
   Create a new todo by specifying the todo priority
   and text.
   $ todo new <priority> <text>
-  
+
   Delete a todo by specifying the todo's id. You can
   see each todo's id using the `list` subcommand.
   $ todo del <todo_id>
-  
+
   Clear all stored todos. 
   WARNING: This is irreversible.
   $ todo clear
-  
+
   Show the this help document.
   $ todo help
   EOS
 
   def handle(command)
+    return [HELP_TEXT, ""] if command.count < 1
+
+    stdout, stderr = send("handle_#{command[0]}", command[1..-1])
+  end
+
+  def method_missing(method_name, _args)
+    method_name = method_name.to_s
+
+    if method_name.start_with?("handle_")
+      subcommand = method_name[7..-1]
+      [HELP_TEXT, "No valid subcommand `#{subcommand}`."]
+    else
+      super
+    end
+  end
+
+  def respond_to_missing?(method_name, _args)
+    method_name = method_name.to_s
+
+    method_name.start_with?("handle_") || super
+  end
+
+  private
+
+  ### Subcommands
+
+  def handle_help(_args)
+    [HELP_TEXT, ""]
+  end
+
+  def handle_list(_args)
+    data = read.to_a.sort_by { |key, data| data["priority"].to_i }
+
+    return ["No todos!", ""] if data.empty?
+
+    priority_values = data.map { |_key, data| data["priority"] }
+    priority_value_length = priority_values.map { |p| p.to_s.length }.max
+    priority_header_length = "Priority".length
+    priority_length = [priority_header_length, priority_value_length].max
+
+    rows = data.map do |key, data|
+      [data["priority"].to_s.rjust(priority_length), key, data["text"]].join("  ")
+    end
+
+    header = ["Priority".rjust(priority_length), "ID".ljust(4), "Todo"].join("  ")
+    rows = rows.unshift(header)
+
+    max_priority = priority_values.max
+    missing_priorities = (1..max_priority).to_a - priority_values
+
+    rows += ["\nMissing priorities:", missing_priorities.join(", ")] unless missing_priorities.empty?
+
+    [rows.join("\n"), ""] 
+  end
+
+  def handle_new(args)
+    error_msg = "Must pass an integer priority and text string."
+
+    return [HELP_TEXT, error_msg] unless args.count == 2 && args[0] =~ /^\d+$/
+
+    data = read()
+
+    priority = args[0].to_i
+    text = args[1]
+    id = rand(36**4).to_s(36).rjust(4, "0")
+    
+    data[id] = {"priority" => priority, "text" => text}
+
+    write(data)
+
+    ["Created todo with priority #{priority}: \"#{text}\".", ""]
+  end
+
+  def handle_del(args)
+    error_msg = "Must pass a valid todo id. See valid todo ids via the `list` subcommand."
+
+    data = read
+
+    return [HELP_TEXT, error_msg] unless args.count == 1 && data.keys.include?(args[0])
+
+    deleted_todo = data.delete(args[0])
+
+    write(data)
+
+    priority = deleted_todo["priority"]
+    text = deleted_todo["text"]
+
+    ["Deleted todo with priority #{priority}: \"#{text}\".", ""]
+  end
+
+  def handle_clear(_args)
+    write({})
+
+    ["Cleared all todos.", ""]
+  end
+
+  ### Persistence
+
+  def write(data)
+    File.open(Todo::TODO_DATA_PATH, "w") { |f| f.write(data.to_json) }
+  end
+
+  def read()
+    JSON.parse(File.read(TODO_DATA_PATH))
+  rescue JSON::ParserError, Errno::ENOENT
+    return {}
   end
 end
+
+stdout, stderr = Todo.new.handle(ARGV)
+puts(stdout) if stdout.length > 0
+warn(stderr) if stderr.length > 0
