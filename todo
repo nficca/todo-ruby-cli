@@ -1,3 +1,38 @@
 #!/usr/bin/ruby
+require "json"
 
-puts "Hello, world!"
+class Todo
+  TODO_DATA_PATH = ENV["TODO_DATA_PATH"] || "#{ENV["HOME"]}/.todo/data"
+  
+  HELP_TEXT = <<~EOS
+  todo
+  ----
+  A simple todo-tracking CLI.
+  
+  Usage
+  ----- 
+  General: todo <subcommand> <args...>
+  
+  List all current todos, their priorities, and the
+  available priorities for new todos.
+  $ todo list
+  
+  Create a new todo by specifying the todo priority
+  and text.
+  $ todo new <priority> <text>
+  
+  Delete a todo by specifying the todo's id. You can
+  see each todo's id using the `list` subcommand.
+  $ todo del <todo_id>
+  
+  Clear all stored todos. 
+  WARNING: This is irreversible.
+  $ todo clear
+  
+  Show the this help document.
+  $ todo help
+  EOS
+
+  def handle(command)
+  end
+end
