@@ -1,5 +1,6 @@
 #!/usr/bin/ruby
 require "json"
+require 'fileutils'
 
 class Todo
   TODO_DATA_PATH = ENV["TODO_DATA_PATH"] || "#{ENV["HOME"]}/.todo/data"
@@ -138,7 +139,11 @@ class Todo
 
   def read()
     JSON.parse(File.read(TODO_DATA_PATH))
-  rescue JSON::ParserError, Errno::ENOENT
+  rescue Errno::ENOENT
+    FileUtils.mkdir_p(File.dirname(TODO_DATA_PATH))
+    write({})
+    return read()
+  rescue JSON::ParserError
     return {}
   end
 end
